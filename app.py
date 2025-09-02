@@ -81,8 +81,8 @@ axis_end = total_plot_width - 0.5 + (GAP_SIZE / 2)
 fig.update_layout(
     # --- THIS IS THE FIX for perfect symmetry ---
     # We set width and height to be equal to enforce a square plot
-    width=1000, 
-    height=1000,
+    width=1200, 
+    height=1200,
     # -----------------------------------------------
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
