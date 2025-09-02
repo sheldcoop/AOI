@@ -3,8 +3,8 @@
 import plotly.graph_objects as go
 import pandas as pd
 from itertools import cycle
-# Import the centralized configuration using a relative path
-from ..config import PANEL_SIZE, GAP_SIZE, STYLE
+# Import the centralized configuration
+from app.config import PANEL_SIZE, GAP_SIZE, STYLE
 
 def _create_dynamic_color_map(df: pd.DataFrame):
     """

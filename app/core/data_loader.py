@@ -3,8 +3,8 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
-# Import the centralized configuration using a relative path
-from ..config import COLUMN_NAMES, PANEL_SIZE, GAP_SIZE
+# Import the centralized configuration
+from app.config import COLUMN_NAMES, PANEL_SIZE, GAP_SIZE
 
 # Use Streamlit's cache to avoid reprocessing the same file on every interaction.
 @st.cache_data
