@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Symmetrical padding/margins around the quad panel layout.
+# Final Version: Enforces a square aspect ratio for perfect symmetrical padding.
 
 import streamlit as st
 import pandas as pd
@@ -75,22 +75,22 @@ for x_start, y_start in panel_coords:
 
 # --- 6. Style the Final Layout with Symmetrical Padding ---
 total_plot_width = 2 * PANEL_SIZE + GAP_SIZE
-# Define the range to include a margin equal to half the gap size on each side
 axis_start = -0.5 - (GAP_SIZE / 2)
 axis_end = total_plot_width - 0.5 + (GAP_SIZE / 2)
 
 fig.update_layout(
-    width=1200, height=1200,
+    # --- THIS IS THE FIX for perfect symmetry ---
+    # We set width and height to be equal to enforce a square plot
+    width=1000, 
+    height=1000,
+    # -----------------------------------------------
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
-    # --- THIS IS THE FIX for symmetrical padding ---
     xaxis=dict(range=[axis_start, axis_end], visible=False),
-    yaxis=dict(range=[axis_start, axis_end], visible=False),
-    # -----------------------------------------------
+    yaxis=dict(range=[axis_start, axis_end], visible=False, scaleanchor='x', scaleratio=1),
     shapes=shapes,
-    margin=dict(l=0, r=0, t=0, b=0), # Set margins to 0 to let the range control the padding
-    showlegend=False,
-    yaxis_scaleanchor='x'
+    margin=dict(l=0, r=0, t=0, b=0),
+    showlegend=False
 )
 
 # --- 7. Display the plot in Streamlit ---
