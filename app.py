@@ -12,7 +12,7 @@ st.set_page_config(page_title="Defect Panel Map", layout="wide")
 
 # --- 2. Hardcoded Sample Data ---
 # We use more defects to simulate the dense look of the target image
-NUM_DEFECTS = 2000
+NUM_DEFECTS = 100
 GRID_SIZE_X = 14
 GRID_SIZE_Y = 14
 PANEL_SIZE = 7
