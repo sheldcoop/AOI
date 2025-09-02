@@ -23,7 +23,7 @@ DEFECT_STYLE_MAP = {
 # --- 2. Data and Image Fabrication ---
 @st.cache_resource
 def generate_data():
-    NUM_DEFECTS = 400; GRID_SIZE = 14; IMAGE_FOLDER = "fabricated_images"
+    NUM_DEFECTS = 100; GRID_SIZE = 14; IMAGE_FOLDER = "fabricated_images"
     df = pd.DataFrame({'DEFECT_ID': list(range(1, NUM_DEFECTS + 1)), 'DEFECT_TYPE': np.random.choice(list(DEFECT_STYLE_MAP.keys()), size=NUM_DEFECTS), 'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS), 'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS)})
     if os.path.exists(IMAGE_FOLDER): shutil.rmtree(IMAGE_FOLDER)
     os.makedirs(IMAGE_FOLDER)
@@ -61,8 +61,8 @@ with col1:
     
     # --- THIS IS THE FIX ---
     fig.update_layout(
-        width=1200, # A wide container
-        height=750, # A shorter container
+        width=600, # A wide container
+        height=600, # A shorter container
         plot_bgcolor=BG_COLOR,
         paper_bgcolor=BG_COLOR,
         xaxis=dict(
