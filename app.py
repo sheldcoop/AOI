@@ -24,28 +24,40 @@ PLOT_BG_COLOR: str = '#F4A460'
 # These functions handle the data processing. They are cached for performance.
 
 @st.cache_data
-def extract_images_from_excel(uploaded_file_contents: bytes) -> List[str]:
-    """Extracts all images from the bytes of an uploaded .xlsx file."""
-    EXTRACT_FOLDER = "temp_excel_contents"
-    MEDIA_FOLDER = os.path.join(EXTRACT_FOLDER, 'xl', 'media')
-    if os.path.exists(EXTRACT_FOLDER): shutil.rmtree(EXTRACT_FOLDER)
-    os.makedirs(MEDIA_FOLDER, exist_ok=True)
-    
-    temp_excel_path = os.path.join(EXTRACT_FOLDER, "temp.xlsx")
-    with open(temp_excel_path, "wb") as f: f.write(uploaded_file_contents)
-
+def load_and_clean_data(uploaded_file) -> Optional[pd.DataFrame]:
+    """
+    Loads and cleans data from the specific Excel file format, renaming columns for robustness.
+    """
     try:
-        with zipfile.ZipFile(temp_excel_path, 'r') as zf: zf.extractall(EXTRACT_FOLDER)
-    except Exception: return []
+        # header=1 tells pandas to use the SECOND row (index 1) as the column names.
+        df = pd.read_excel(uploaded_file, header=1)
 
-    if os.path.exists(MEDIA_FOLDER):
-        try:
-            # Sort files numerically to ensure order matches Excel rows
-            files = sorted(os.listdir(MEDIA_FOLDER), key=lambda f: int(''.join(filter(str.isdigit, f))))
-            return [os.path.join(MEDIA_FOLDER, f) for f in files]
-        except Exception: # Fallback for non-standard filenames
-            return sorted([os.path.join(MEDIA_FOLDER, f) for f in os.listdir(MEDIA_FOLDER)])
-    return []
+        # --- THE NEW, ROBUST FIX ---
+        # Rename the first 6 columns to our standard names, regardless of what they are in the file.
+        # This avoids errors from spaces or typos in the Excel header.
+        df.columns.values[0] = 'DEFECT_ID'
+        df.columns.values[1] = 'DEFECT_TYPE'
+        df.columns.values[2] = 'X_COORDINATES'
+        df.columns.values[3] = 'Y_COORDINATES'
+        df.columns.values[4] = 'UNIT_INDEX_X'
+        df.columns.values[5] = 'UNIT_INDEX_Y'
+        
+        # Now proceed with cleaning using our standard names
+        required_cols = ['DEFECT_ID', 'DEFECT_TYPE', 'X_COORDINATES', 'Y_COORDINATES', 'UNIT_INDEX_X', 'UNIT_INDEX_Y']
+        df = df[required_cols]
+
+        df.dropna(subset=['DEFECT_ID'], inplace=True)
+        for col in ['UNIT_INDEX_X', 'UNIT_INDEX_Y', 'X_COORDINATES', 'Y_COORDINATES']:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+        for col in ['DEFECT_ID', 'UNIT_INDEX_X', 'UNIT_INDEX_Y']:
+            df[col] = df[col].astype(int)
+            
+        return df.reset_index(drop=True)
+
+    except Exception as e:
+        st.error(f"Failed to process Excel data. Please check the file format. Error: {e}")
+        return None
 
 @st.cache_data
 def load_and_clean_data(uploaded_file) -> Optional[pd.DataFrame]:
