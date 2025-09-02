@@ -6,6 +6,7 @@ from streamlit_plotly_events import plotly_events
 # Use absolute imports from the 'app' package
 from app.core.data_loader import load_and_transform_data
 from app.ui.plotter import create_defect_map
+from app.config import VIEW_CONFIG # Import the view configurations
 
 def main():
     """
@@ -21,8 +22,20 @@ def main():
     st.title("Defect Panel Map Visualizer")
     st.markdown("Hover over a defect to see its type and ID. Click on a defect to see its full details below the map.")
 
-    # --- 3. Sidebar for File Upload ---
+    # --- 3. Sidebar for Controls ---
     st.sidebar.title("Control Panel")
+
+    # Add view selection dropdown to the sidebar
+    view_choice = st.sidebar.selectbox(
+        "Select Visualization Type",
+        options=list(VIEW_CONFIG.keys())
+    )
+
+    # Get the configuration for the selected view
+    selected_view = VIEW_CONFIG[view_choice]
+    panel_size = selected_view['panel_size']
+    gap_size = selected_view['gap_size']
+
     uploaded_file = st.sidebar.file_uploader(
         "Upload your Defect Excel File",
         type=["xlsx"]
@@ -30,9 +43,8 @@ def main():
 
     # --- 4. Main Application Logic ---
     if uploaded_file is not None:
-        # We need to reset the index to ensure the 'pointNumber' from the click event
-        # corresponds directly to the DataFrame's integer location.
-        df_transformed = load_and_transform_data(uploaded_file)
+        # Pass the selected view parameters to the data loader
+        df_transformed = load_and_transform_data(uploaded_file, panel_size, gap_size)
 
         if df_transformed is not None and not df_transformed.empty:
             df_transformed = df_transformed.reset_index(drop=True)
@@ -42,17 +54,16 @@ def main():
             col1, col2 = st.columns([2, 1])
 
             with col1:
+                st.subheader(selected_view['title'])
                 with st.spinner("Generating defect map..."):
-                    fig = create_defect_map(df_transformed)
-                    # Use plotly_events to make the chart interactive
-                    selected_points = plotly_events(fig, click_event=True, key="defect_map")
+                    # Pass the selected view parameters to the plotter
+                    fig = create_defect_map(df_transformed, panel_size, gap_size)
+                    selected_points = plotly_events(fig, click_event=True, key=f"defect_map_{view_choice}")
 
             with col2:
                 st.subheader("Selected Defect Details")
                 if selected_points:
-                    # Get the index of the first clicked point
                     point_index = selected_points[0]['pointNumber']
-                    # Retrieve the full data for that defect
                     selected_defect_data = df_transformed.iloc[point_index]
                     st.write(selected_defect_data)
                 else:

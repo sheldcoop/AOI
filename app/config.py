@@ -14,10 +14,20 @@ COLUMN_NAMES = [
     "UNIT_INDEX_Y"
 ]
 
-# --- Panel and Grid Configuration ---
-# These values define the geometry of the visualization.
-PANEL_SIZE = 7  # The size of one square panel (e.g., 7x7 grid).
-GAP_SIZE = 1    # The size of the gap between panels.
+# --- View Configurations ---
+# Defines the geometric parameters for different visualization modes.
+VIEW_CONFIG = {
+    "Original 2x2": {
+        "panel_size": 7,
+        "gap_size": 1,
+        "title": "Original View (2x2 of 7x7 Panels)"
+    },
+    "14x14 Grid": {
+        "panel_size": 6,
+        "gap_size": 2,
+        "title": "14x14 View (4x 6x6 Panels with 2-Unit Gap)"
+    }
+}
 
 # --- Styling Configuration ---
 # Colors and styles for the Plotly chart.
