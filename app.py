@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Pure Plotly, with perfect symmetrical padding.
+# Final Version: Uses a manual coordinate system for perfect 1-unit padding.
 
 import streamlit as st
 import pandas as pd
@@ -23,7 +23,7 @@ DEFECT_STYLE_MAP = {
 # --- 2. Data and Image Fabrication ---
 @st.cache_resource
 def generate_data():
-    NUM_DEFECTS = 100; GRID_SIZE = 14; IMAGE_FOLDER = "fabricated_images"
+    NUM_DEFECTS = 400; GRID_SIZE = 14; IMAGE_FOLDER = "fabricated_images"
     df = pd.DataFrame({'DEFECT_ID': list(range(1, NUM_DEFECTS + 1)), 'DEFECT_TYPE': np.random.choice(list(DEFECT_STYLE_MAP.keys()), size=NUM_DEFECTS), 'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS), 'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS)})
     if os.path.exists(IMAGE_FOLDER): shutil.rmtree(IMAGE_FOLDER)
     os.makedirs(IMAGE_FOLDER)
@@ -37,12 +37,29 @@ def generate_data():
 
 df = generate_data()
 
-# --- 3. Transform Coordinates for Plotting ---
-PANEL_SIZE = 7; GAP_SIZE = 1
-df['plot_x'] = (df['UNIT_INDEX_Y'] % PANEL_SIZE) + np.where(df['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0) + np.random.uniform(0.1, 0.9, size=len(df))
-df['plot_y'] = (df['UNIT_INDEX_X'] % PANEL_SIZE) + np.where(df['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0) + np.random.uniform(0.1, 0.9, size=len(df))
+# --- 3. Transform Coordinates for Manual Plotting ---
+PANEL_SIZE = 7
+GAP_SIZE = 1
+PADDING = 1
 
-col1, col2 = st.columns([3, 1])
+def transform_coords(df):
+    # Base position within a 7x7 panel
+    plot_x = df['UNIT_INDEX_Y'] % PANEL_SIZE
+    plot_y = df['UNIT_INDEX_X'] % PANEL_SIZE
+    
+    # Add offsets for panel position (bottom-left is 0,0)
+    # Add PADDING to shift everything right and up
+    plot_y += np.where(df['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE + PADDING, PADDING)
+    plot_x += np.where(df['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE + PADDING, PADDING)
+    
+    # Add jitter
+    df['plot_x'] = plot_x + np.random.uniform(0.1, 0.9, size=len(df))
+    df['plot_y'] = plot_y + np.random.uniform(0.1, 0.9, size=len(df))
+    return df
+
+df = transform_coords(df)
+
+col1, col2 = st.columns([2, 1])
 
 with col1:
     fig = go.Figure()
@@ -50,40 +67,33 @@ with col1:
         dff = df[df['DEFECT_TYPE'] == dtype]
         fig.add_trace(go.Scatter(x=dff['plot_x'], y=dff['plot_y'], mode='markers', marker=dict(color=color, size=5), name=dtype, customdata=dff.index, hoverinfo='none'))
 
+    # --- Manually Draw Panels and Grids in Absolute Coordinates ---
     shapes = []
-    panel_coords = [(0, 0), (0, PANEL_SIZE + GAP_SIZE), (PANEL_SIZE + GAP_SIZE, 0), (PANEL_SIZE + GAP_SIZE, PANEL_SIZE + GAP_SIZE)]
-    for x_start, y_start in panel_coords:
-        shapes.append(dict(type='rect', x0=x_start-0.5, y0=y_start-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+PANEL_SIZE-0.5, line=dict(width=0), fillcolor=PANEL_COLOR, layer='below'))
-        shapes.append(dict(type='rect', x0=x_start-0.5, y0=y_start-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+PANEL_SIZE-0.5, line=dict(color="black", width=4), fillcolor='rgba(0,0,0,0)', layer='below'))
+    panel_origins = [
+        (PADDING, PADDING), 
+        (PADDING, PADDING + PANEL_SIZE + GAP_SIZE), 
+        (PADDING + PANEL_SIZE + GAP_SIZE, PADDING), 
+        (PADDING + PANEL_SIZE + GAP_SIZE, PADDING + PANEL_SIZE + GAP_SIZE)
+    ]
+    for x_start, y_start in panel_origins:
+        shapes.append(dict(type='rect', x0=x_start, y0=y_start, x1=x_start+PANEL_SIZE, y1=y_start+PANEL_SIZE, line=dict(width=4, color="black"), fillcolor=PANEL_COLOR, layer='below'))
         for i in range(1, PANEL_SIZE):
-            shapes.append(dict(type='line', x0=x_start+i-0.5, y0=y_start-0.5, x1=x_start+i-0.5, y1=y_start+PANEL_SIZE-0.5, line=dict(color="black", width=1), layer='below'))
-            shapes.append(dict(type='line', x0=x_start-0.5, y0=y_start+i-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+i-0.5, line=dict(color="black", width=1), layer='below'))
+            shapes.append(dict(type='line', x0=x_start+i, y0=y_start, x1=x_start+i, y1=y_start+PANEL_SIZE, line=dict(color="black", width=1), layer='below'))
+            shapes.append(dict(type='line', x0=x_start, y0=y_start+i, x1=x_start+PANEL_SIZE, y1=y_start+i, line=dict(color="black", width=1), layer='below'))
     
-    # --- THIS IS THE FIX ---
+    # --- Style the Final Layout with a Fixed Coordinate System ---
+    total_size = 2 * PADDING + 2 * PANEL_SIZE + GAP_SIZE
+    
     fig.update_layout(
-        width=800, # A wide container
-        height=800, # A shorter container
+        width=800, height=800,
         plot_bgcolor=BG_COLOR,
         paper_bgcolor=BG_COLOR,
-        xaxis=dict(
-            range=[-1.5, 16.5],
-            domain=[0, 1], # Use full width for x-axis calculations
-            visible=False
-        ),
-        yaxis=dict(
-            range=[-1.5, 16.5],
-            # This is the key: tell y-axis to only occupy a central square of the vertical space
-            # which forces the plot to be square and centered.
-            domain=[0.1, 0.9], 
-            scaleanchor='x',
-            scaleratio=1,
-            visible=False
-        ),
+        xaxis=dict(range=[0, total_size], visible=False, constrain='domain'),
+        yaxis=dict(range=[0, total_size], visible=False, scaleanchor='x', scaleratio=1),
         shapes=shapes,
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False
     )
-    # ---------------------
     
     selected_points = plotly_events(fig, click_event=True, key="plot_click")
 
