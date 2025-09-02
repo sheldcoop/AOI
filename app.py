@@ -61,8 +61,8 @@ with col1:
     
     # --- THIS IS THE FIX ---
     fig.update_layout(
-        width=200, # A wide container
-        height=200, # A shorter container
+        width=800, # A wide container
+        height=800, # A shorter container
         plot_bgcolor=BG_COLOR,
         paper_bgcolor=BG_COLOR,
         xaxis=dict(
