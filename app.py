@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Enhanced styling with thicker inner lines and new colors.
+# Final Version: Updated background color.
 
 import streamlit as st
 import pandas as pd
@@ -15,11 +15,11 @@ st.set_page_config(page_title="Quad Panel Defect Map", layout="wide")
 st.title("Interactive Defect Map")
 
 # --- NEW STYLES ---
-PANEL_FILL_COLOR = '#A0522D' # Lighter Brown (Sienna)
-PANEL_BORDER_COLOR = '#8B4513' # Darker Copper/Brown (SaddleBrown)
-BG_COLOR = '#556B2F'   # Dark Olive Green
-THIN_LINE_WIDTH = 2    # Thicker inner lines
-THICK_LINE_WIDTH = 4   # Outer border width
+PANEL_FILL_COLOR = '#A0522D'       # Sienna (Lighter Brown)
+PANEL_BORDER_COLOR = '#8B4513'     # SaddleBrown (Copper)
+BG_COLOR = '#6B4226'               # Darker Brown for background
+THIN_LINE_WIDTH = 2
+THICK_LINE_WIDTH = 4
 
 DEFECT_STYLE_MAP = {
     'Nick': 'magenta', 'Short': 'deeppink', 'Missing Feature': 'lime',
@@ -63,22 +63,18 @@ with col1:
         dff = df[df['DEFECT_TYPE'] == dtype]
         fig.add_trace(go.Scatter(x=dff['plot_x'], y=dff['plot_y'], mode='markers', marker=dict(color=color, size=5), name=dtype, customdata=dff.index, hoverinfo='none'))
 
-    # --- Manually Draw Panels and Grids with New Styles ---
     shapes = []
     panel_origins = [(PADDING, PADDING), (PADDING, PADDING + PANEL_SIZE + GAP_SIZE), (PADDING + PANEL_SIZE + GAP_SIZE, PADDING), (PADDING + PANEL_SIZE + GAP_SIZE, PADDING + PANEL_SIZE + GAP_SIZE)]
     for x_start, y_start in panel_origins:
-        # Panel with lighter fill and dark copper border
         shapes.append(dict(type='rect', x0=x_start, y0=y_start, x1=x_start+PANEL_SIZE, y1=y_start+PANEL_SIZE,
                            line=dict(width=THICK_LINE_WIDTH, color=PANEL_BORDER_COLOR),
                            fillcolor=PANEL_FILL_COLOR, layer='below'))
-        # Thicker inner grid lines
         for i in range(1, PANEL_SIZE):
             shapes.append(dict(type='line', x0=x_start+i, y0=y_start, x1=x_start+i, y1=y_start+PANEL_SIZE,
                                line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
             shapes.append(dict(type='line', x0=x_start, y0=y_start+i, x1=x_start+PANEL_SIZE, y1=y_start+i,
                                line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
     
-    # --- Style the Final Layout ---
     total_size = 2 * PADDING + 2 * PANEL_SIZE + GAP_SIZE
     fig.update_layout(
         width=800, height=800,
