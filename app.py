@@ -1,5 +1,6 @@
 # app.py
-# Final Version: Creates a single 14x14 grid with thick central quadrant lines.
+# Final Version: Creates a 2x2 grid of panels with a visible gap,
+# mimicking the target image exactly.
 
 import streamlit as st
 import pandas as pd
@@ -7,81 +8,98 @@ import numpy as np
 import plotly.graph_objects as go
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Quadrant Defect Map", layout="wide")
-st.title("Quadrant Panel Defect Map")
+st.set_page_config(page_title="Quad Panel Map", layout="centered")
 
-# --- 2. Hardcoded Sample Data for a 14x14 Panel ---
-NUM_DEFECTS = 300
-GRID_SIZE = 14 # 14 rows and 14 columns (indices 0-13)
+# --- 2. Hardcoded Sample Data ---
+# We will create defects across a 20x20 unit area to populate all quadrants
+NUM_DEFECTS = 1000
+GRID_SIZE_X = 20
+GRID_SIZE_Y = 20
 
-defect_types = [
-    'Nick', 'Short', 'Missing Feature', 'Cut', 'Fine Short',
-    'Pad Violation', 'Island', 'Cut/Short', 'Nick/Protrusion'
-]
+defect_types = ['Nick', 'Short', 'Missing Feature', 'Pad Violation', 'Other']
 
 df = pd.DataFrame({
-    'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS),
-    'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS),
+    'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE_X, size=NUM_DEFECTS),
+    'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE_Y, size=NUM_DEFECTS),
     'DEFECT_TYPE': np.random.choice(defect_types, size=NUM_DEFECTS)
 })
 
+# Define styles to match the target image
 defect_style_map = {
-    'Nick': 'magenta', 'Short': 'red', 'Missing Feature': 'lime', 'Cut': 'cyan',
-    'Fine Short': '#DDA0DD', 'Pad Violation': 'white', 'Island': 'orange',
-    'Cut/Short': '#00BFFF', 'Nick/Protrusion': 'yellow'
+    'Nick': 'magenta',
+    'Short': 'deeppink',
+    'Missing Feature': 'lime',
+    'Pad Violation': 'white',
+    'Other': 'red'
 }
-PLOT_BG_COLOR = '#8B4513' # SaddleBrown, to match your target image
+PANEL_COLOR = '#8B4513'  # SaddleBrown
+BORDER_COLOR = '#556B2F' # DarkOliveGreen
+GAP_COLOR = '#556B2F'    # DarkOliveGreen
+BORDER_WIDTH = 5
 
-# Add jittered coordinates for plotting
-np.random.seed(42)
-df['plot_x'] = df['UNIT_INDEX_Y'] + np.random.uniform(0.15, 0.85, size=len(df))
-df['plot_y'] = df['UNIT_INDEX_X'] + np.random.uniform(0.15, 0.85, size=len(df))
+# --- 3. Transform Coordinates to Create Gaps ---
+PANEL_SIZE = 10  # Each quadrant is a 10x10 panel
+GAP_SIZE = 1     # The size of the gap between panels
 
-# --- 3. Create a Single Plotly Figure ---
+# Function to calculate the final plot coordinates
+def transform_coords(df):
+    plot_x = df['UNIT_INDEX_Y'] % PANEL_SIZE
+    plot_y = df['UNIT_INDEX_X'] % PANEL_SIZE
+    
+    # Add offset for the top panels
+    plot_y = plot_y + np.where(df['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0)
+    # Add offset for the right panels
+    plot_x = plot_x + np.where(df['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0)
+    
+    # Add random jitter within the cell
+    df['plot_x'] = plot_x + np.random.uniform(0.1, 0.9, size=len(df))
+    df['plot_y'] = plot_y + np.random.uniform(0.1, 0.9, size=len(df))
+    return df
+
+df = transform_coords(df)
+
+# --- 4. Create a Single Plotly Figure ---
 fig = go.Figure()
 
-# Add all defects to the single figure
+# Add all defects to the figure
 for dtype, color in defect_style_map.items():
     dff = df[df['DEFECT_TYPE'] == dtype]
     if not dff.empty:
         fig.add_trace(go.Scatter(
             x=dff['plot_x'], y=dff['plot_y'], mode='markers',
-            marker=dict(color=color, size=10, line=dict(width=1, color='Black')),
-            name=dtype,
+            marker=dict(color=color, size=6, line=dict(width=0.5, color='Black')),
+            name=dtype, showlegend=False
         ))
 
-# --- 4. Draw Grid with Variable Thickness Lines ---
+# --- 5. Manually Draw the Panels and Grids ---
 shapes = []
-THIN_LINE_WIDTH = 2
-THICK_LINE_WIDTH = 5
+# Define the 4 panel boundaries
+panel_coords = [
+    (0, 0), (0, PANEL_SIZE + GAP_SIZE),
+    (PANEL_SIZE + GAP_SIZE, 0), (PANEL_SIZE + GAP_SIZE, PANEL_SIZE + GAP_SIZE)
+]
 
-# Draw all horizontal and vertical lines
-for i in range(GRID_SIZE + 1):
-    # Determine line thickness
-    h_width = THICK_LINE_WIDTH if i in [0, 7, 14] else THIN_LINE_WIDTH
-    v_width = THICK_LINE_WIDTH if i in [0, 7, 14] else THIN_LINE_WIDTH
-    
-    # Horizontal lines
-    shapes.append(dict(type='line', x0=-0.5, y0=i-0.5, x1=GRID_SIZE-0.5, y1=i-0.5,
-                      line=dict(color="Black", width=h_width), layer='below'))
-    # Vertical lines
-    shapes.append(dict(type='line', x0=i-0.5, y0=-0.5, x1=i-0.5, y1=GRID_SIZE-0.5,
-                      line=dict(color="Black", width=v_width), layer='below'))
+# Draw the thin inner grid lines for each panel
+for x_start, y_start in panel_coords:
+    for i in range(1, PANEL_SIZE):
+        # Vertical lines
+        shapes.append(dict(type='line', x0=x_start+i, y0=y_start, x1=x_start+i, y1=y_start+PANEL_SIZE-0.01, line=dict(color="black", width=0.5)))
+        # Horizontal lines
+        shapes.append(dict(type='line', x0=x_start, y0=y_start+i, x1=x_start+PANEL_SIZE-0.01, y1=y_start+i, line=dict(color="black", width=0.5)))
 
-# --- 5. Style the Final Layout ---
+# --- 6. Style the Final Layout ---
+total_size = 2 * PANEL_SIZE + GAP_SIZE
 fig.update_layout(
-    plot_bgcolor=PLOT_BG_COLOR,
+    width=800, height=800,
+    plot_bgcolor=PANEL_COLOR,
+    paper_bgcolor=BORDER_COLOR, # Use paper background for the outer border
+    xaxis=dict(range=[-0.5, total_size-0.5], showticklabels=False, showgrid=False, zeroline=False),
+    yaxis=dict(range=[-0.5, total_size-0.5], showticklabels=False, showgrid=False, zeroline=False),
     shapes=shapes,
-    width=900, 
-    height=900,
-    xaxis_title='Unit Column Index (Y)',
-    yaxis_title='Unit Row Index (X)',
-    # Set axis ranges to perfectly frame the grid
-    xaxis=dict(range=[-0.5, GRID_SIZE-0.5], tickvals=np.arange(0, GRID_SIZE), showgrid=False),
-    yaxis=dict(range=[-0.5, GRID_SIZE-0.5], tickvals=np.arange(0, GRID_SIZE), showgrid=False),
-    legend_title_text='Defect Types',
+    margin=dict(l=20, r=20, t=20, b=20), # Margin for the outer border
+    showlegend=False,
     yaxis_scaleanchor='x'
 )
 
-# --- 6. Display the plot in Streamlit ---
+# --- 7. Display the plot in Streamlit ---
 st.plotly_chart(fig)
