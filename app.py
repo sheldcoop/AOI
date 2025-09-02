@@ -74,15 +74,15 @@ for x_start, y_start in panel_coords:
                           line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
 
 # --- 6. Style the Final Layout with Symmetrical Padding ---
-total_plot_width = PANEL_SIZE + GAP_SIZE
+total_plot_width = 2*PANEL_SIZE + GAP_SIZE
 axis_start = -0.5 - (GAP_SIZE / 2)
 axis_end = total_plot_width - 0.5 + (GAP_SIZE / 2)
 
 fig.update_layout(
     # --- THIS IS THE FIX for perfect symmetry ---
     # We set width and height to be equal to enforce a square plot
-    width=1000, 
-    height=1000,
+    width=600, 
+    height=600,
     # -----------------------------------------------
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
