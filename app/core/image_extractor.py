@@ -4,11 +4,12 @@ import zipfile
 import os
 import shutil
 from typing import List
-import streamlit as st
+import streamlit as st  # <-- THIS IS THE FIX
 
 # Use Streamlit's cache to avoid re-extracting on every interaction
 @st.cache_data
 def extract_images_from_excel(uploaded_file_contents: bytes) -> List[str]:
+# ... (the rest of the file is correct) ...
     """
     Extracts all images from the bytes of an uploaded .xlsx file.
     Caches the result to avoid re-processing the same file.
