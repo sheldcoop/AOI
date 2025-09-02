@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Enforces a square aspect ratio for perfect symmetrical padding.
+# Final Version: Enforces a symmetrical 1-unit padding on all sides.
 
 import streamlit as st
 import pandas as pd
@@ -73,17 +73,16 @@ for x_start, y_start in panel_coords:
         shapes.append(dict(type='line', x0=x_start-0.5, y0=y_start+i-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+i-0.5,
                           line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
 
-# --- 6. Style the Final Layout with Symmetrical Padding ---
-total_plot_width = 2*PANEL_SIZE + GAP_SIZE
-axis_start = -0.5 - (GAP_SIZE / 2)
-axis_end = total_plot_width - 0.5 + (GAP_SIZE / 2)
+# --- 6. Style the Final Layout with 1-Unit Padding ---
+total_plot_width = 2 * PANEL_SIZE + GAP_SIZE
+# --- THIS IS THE FIX ---
+# The range starts 1 unit before the grid and ends 1 unit after the grid.
+axis_start = -1.5
+axis_end = total_plot_width - 0.5 + 1
+# ---------------------
 
 fig.update_layout(
-    # --- THIS IS THE FIX for perfect symmetry ---
-    # We set width and height to be equal to enforce a square plot
-    width=1200, 
-    height=1200,
-    # -----------------------------------------------
+    width=1000, height=1000,
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
     xaxis=dict(range=[axis_start, axis_end], visible=False),
