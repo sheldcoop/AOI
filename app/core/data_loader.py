@@ -2,11 +2,13 @@
 
 import pandas as pd
 from typing import Optional
+import streamlit as st  # <-- THIS IS THE FIX
 from app.utils.config import COLUMN_NAMES, REQUIRED_COLUMNS
 
 # Use Streamlit's cache to avoid re-loading and processing the same file
 @st.cache_data
 def load_and_clean_data(uploaded_file) -> Optional[pd.DataFrame]:
+# ... (the rest of the file is correct) ...
     """
     Loads data from the uploaded Excel file, cleans it, and prepares it for visualization.
     
