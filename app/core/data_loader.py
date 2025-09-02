@@ -3,6 +3,8 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+# Import the centralized configuration
+from app.config import COLUMN_NAMES, PANEL_SIZE, GAP_SIZE
 
 # Use Streamlit's cache to avoid reprocessing the same file on every interaction.
 @st.cache_data
@@ -16,20 +18,15 @@ def load_and_transform_data(uploaded_file):
     Returns:
         A cleaned and transformed pandas DataFrame ready for plotting, or None if an error occurs.
     """
-    COLUMN_NAMES = [
-        "DEFECT_ID", "DEFECT_TYPE", "X_COORDINATES", 
-        "Y_COORDINATES", "UNIT_INDEX_X", "UNIT_INDEX_Y"
-    ]
-
     try:
-        # Step 1: Read the Data
+        # Step 1: Read the Data using column names from the config
         df = pd.read_excel(
             uploaded_file,
             engine='openpyxl',
             header=None,
             skiprows=1,
             names=COLUMN_NAMES,
-            usecols="A:F"
+            usecols=f"A:{chr(ord('A') + len(COLUMN_NAMES) - 1)}" # Dynamically set column range
         )
 
         # Step 2: Clean the Data
@@ -40,11 +37,8 @@ def load_and_transform_data(uploaded_file):
         for col in ['DEFECT_ID', 'UNIT_INDEX_X', 'UNIT_INDEX_Y']:
             df[col] = df[col].astype(int)
 
-        # Step 3: Transform Coordinates for 2x2 Gapped Plot
-        PANEL_SIZE = 7
-        GAP_SIZE = 1
-
-        # Calculate the base position within a 7x7 panel
+        # Step 3: Transform Coordinates for 2x2 Gapped Plot using values from config
+        # Calculate the base position within a panel
         plot_x_base = df['UNIT_INDEX_Y'] % PANEL_SIZE
         plot_y_base = df['UNIT_INDEX_X'] % PANEL_SIZE
         
