@@ -1,6 +1,5 @@
 # app.py
-# Final version: Displays a two-panel defect map with correct visual layering.
-# Version 3: Corrected the plotly update_layout syntax.
+# Final version: Displays a single, wide plot with two gapped grids.
 
 import streamlit as st
 import pandas as pd
@@ -34,55 +33,56 @@ defect_style_map = {
 }
 PLOT_BG_COLOR = '#F4A460'
 
-np.random.seed(42)
-df['plot_x'] = df['UNIT_INDEX_Y'] + np.random.uniform(0.15, 0.85, size=len(df))
+# Add jittered coordinates. We need to create a gap in the x-coordinates for the plot.
+# Defects in the second panel (cols 7-13) get a +1 offset for their plot_x.
+gap_size = 1
+df['plot_x'] = df['UNIT_INDEX_Y'] + np.where(df['UNIT_INDEX_Y'] >= 7, gap_size, 0) + np.random.uniform(0.15, 0.85, size=len(df))
 df['plot_y'] = df['UNIT_INDEX_X'] + np.random.uniform(0.15, 0.85, size=len(df))
 
-# --- 3. Create the Two-Column Layout ---
-col1, col2 = st.columns(2)
+# --- 3. Create a Single Plotly Figure ---
+fig = go.Figure()
 
-# --- 4. Function to Create a Single Panel Plot ---
-def create_panel_plot(dataframe, col_start, col_end, title):
-    fig = go.Figure()
-    panel_df = dataframe[(dataframe['UNIT_INDEX_Y'] >= col_start) & (dataframe['UNIT_INDEX_Y'] < col_end)]
+# Add all defects to the single figure
+for dtype, color in defect_style_map.items():
+    dff = df[df['DEFECT_TYPE'] == dtype]
+    if not dff.empty:
+        fig.add_trace(go.Scatter(
+            x=dff['plot_x'], y=dff['plot_y'], mode='markers',
+            marker=dict(color=color, size=12, line=dict(width=1.5, color='Black')),
+            name=dtype,
+        ))
+
+# --- 4. Draw Both Grids with a Gap ---
+shapes = []
+# Grid 1 (Cols 0-6)
+for i in range(7 + 1): # Vertical lines
+    shapes.append(dict(type='line', x0=i-0.5, y0=-0.5, x1=i-0.5, y1=GRID_SIZE_X-0.5, line=dict(color='black', width=4), layer='below'))
+for i in range(GRID_SIZE_X + 1): # Horizontal lines
+    shapes.append(dict(type='line', x0=-0.5, y0=i-0.5, x1=6.5, y1=i-0.5, line=dict(color='black', width=4), layer='below'))
+
+# Grid 2 (Cols 7-13)
+for i in range(7 + 1): # Vertical lines
+    shapes.append(dict(type='line', x0=i+7+gap_size-0.5, y0=-0.5, x1=i+7+gap_size-0.5, y1=GRID_SIZE_X-0.5, line=dict(color='black', width=4), layer='below'))
+for i in range(GRID_SIZE_X + 1): # Horizontal lines
+    shapes.append(dict(type='line', x0=7+gap_size-0.5, y0=i-0.5, x1=13+gap_size+0.5, y1=i-0.5, line=dict(color='black', width=4), layer='below'))
     
-    for dtype, color in defect_style_map.items():
-        dff = panel_df[panel_df['DEFECT_TYPE'] == dtype]
-        if not dff.empty:
-            fig.add_trace(go.Scatter(
-                x=dff['plot_x'], y=dff['plot_y'], mode='markers',
-                marker=dict(color=color, size=12, line=dict(width=1.5, color='Black')),
-                name=dtype, showlegend=(col_start==0)
-            ))
+# --- 5. Style the Layout ---
+fig.update_layout(
+    plot_bgcolor=PLOT_BG_COLOR,
+    shapes=shapes,
+    width=1400, 
+    height=800,
+    xaxis_title='Unit Column Index (Y)',
+    yaxis_title='Unit Row Index (X)',
+    # Set the axis to show original labels despite the gap
+    xaxis=dict(
+        tickvals=np.concatenate([np.arange(0, 7), np.arange(7, 14)]) + np.where(np.arange(0, 14) >= 7, gap_size, 0) + 0.5,
+        ticktext=np.arange(0, 14)
+    ),
+    yaxis=dict(range=[-0.5, GRID_SIZE_X-0.5], tickvals=np.arange(0, GRID_SIZE_X)),
+    legend_title_text='Defect Types',
+    yaxis_scaleanchor='x'
+)
 
-    shapes = []
-    num_cols = col_end - col_start
-    for i in range(num_cols + 1):
-        shapes.append(dict(type='line', x0=i+col_start-0.5, y0=-0.5, x1=i+col_start-0.5, y1=GRID_SIZE_X-0.5, line=dict(color='black', width=4), layer='below'))
-    for i in range(GRID_SIZE_X + 1):
-        shapes.append(dict(type='line', x0=col_start-0.5, y0=i-0.5, x1=col_end-0.5, y1=i-0.5, line=dict(color='black', width=4), layer='below'))
-
-    # --- THIS IS THE FIX ---
-    # The `shapes` list is passed directly, and the `layer` property is defined inside each shape dictionary.
-    fig.update_layout(
-        title=title,
-        xaxis_title='Unit Column Index (Y)',
-        yaxis_title='Unit Row Index (X)' if col_start == 0 else '',
-        plot_bgcolor=PLOT_BG_COLOR,
-        shapes=shapes, # Correctly passing the list of shapes
-        width=700, height=700,
-        xaxis=dict(range=[col_start-0.5, col_end-0.5], tickvals=np.arange(col_start, col_end)),
-        yaxis=dict(range=[-0.5, GRID_SIZE_X-0.5], tickvals=np.arange(0, GRID_SIZE_X)),
-        legend_title_text='Defect Types',
-        yaxis_scaleanchor='x'
-    )
-    # ---------------------
-    
-    return fig
-
-# --- 5. Display the Plots in the Columns ---
-with col1:
-    st.plotly_chart(create_panel_plot(df, 0, 7, "Panel 1 (Cols 0-6)"))
-
-with col2:
-    st.plotly_chart(create_panel_plot(df, 7, 14, "Panel 2 (Cols 7-13)"))
+# --- 6. Display the plot in Streamlit ---
+st.plotly_chart(fig, use_container_width=True)
