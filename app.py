@@ -44,7 +44,7 @@ df['plot_y'] = df['UNIT_INDEX_X'] + np.random.rand(NUM_DEFECTS)
 st.header("Static Defect Map (Matplotlib)")
 
 # Create a figure and axes object with a specific size and background color
-fig, ax = plt.subplots(figsize=(4, 3))
+fig, ax = plt.subplots(figsize=(8, 8))
 fig.patch.set_facecolor('#364521') # Dark olive green from your target
 
 # --- 4. Manually Draw the Panels and Grids ---
