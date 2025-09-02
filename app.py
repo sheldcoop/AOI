@@ -1,98 +1,100 @@
 # app.py
-# Final Version: Creates a wide-aspect plot with correct padding.
+# Final version using Matplotlib to replicate the target visual style.
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Quad Panel Defect Map", layout="wide")
+st.set_page_config(page_title="Defect Panel Map", layout="wide")
 
 # --- 2. Hardcoded Sample Data ---
-NUM_DEFECTS = 400
-GRID_SIZE = 14
+# We use more defects to simulate the dense look of the target image
+NUM_DEFECTS = 2000
+GRID_SIZE_X = 14
+GRID_SIZE_Y = 14
 PANEL_SIZE = 7
 
-defect_types = ['Nick', 'Short', 'Missing Feature', 'Pad Violation', 'Other']
+# Defect types and colors from the target image
+defect_style_map = {
+    'Cluster': 'magenta',
+    'Spot_Lime': 'lime',
+    'Spot_Red': 'red',
+    'Spot_Gray': 'gray',
+    'Special_Cyan': 'cyan',
+    'Special_White': 'white'
+}
+defect_types = list(defect_style_map.keys())
+# Create a weighted probability for defects to simulate the dense pink clusters
+probabilities = [0.6, 0.1, 0.1, 0.1, 0.05, 0.05]
+
 df = pd.DataFrame({
-    'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS),
-    'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE, size=NUM_DEFECTS),
-    'DEFECT_TYPE': np.random.choice(defect_types, size=NUM_DEFECTS)
+    'UNIT_INDEX_X': np.random.randint(0, GRID_SIZE_X, size=NUM_DEFECTS),
+    'UNIT_INDEX_Y': np.random.randint(0, GRID_SIZE_Y, size=NUM_DEFECTS),
+    'DEFECT_TYPE': np.random.choice(defect_types, size=NUM_DEFECTS, p=probabilities)
 })
 
-defect_style_map = {
-    'Nick': 'magenta', 'Short': 'deeppink', 'Missing Feature': 'lime',
-    'Pad Violation': 'white', 'Other': 'red'
-}
-PANEL_COLOR = '#8B4513'
-BG_COLOR = '#556B2F'
+# Add jittered coordinates directly, without gaps for now
+df['plot_x'] = df['UNIT_INDEX_Y'] + np.random.rand(NUM_DEFECTS)
+df['plot_y'] = df['UNIT_INDEX_X'] + np.random.rand(NUM_DEFECTS)
 
-# --- 3. Transform Coordinates to Create Gaps ---
-GAP_SIZE = 1
+# --- 3. Create the Matplotlib Visualization ---
+st.header("Static Defect Map (Matplotlib)")
 
-def transform_coords(df):
-    plot_x = df['UNIT_INDEX_Y'] % PANEL_SIZE
-    plot_y = df['UNIT_INDEX_X'] % PANEL_SIZE
-    plot_y += np.where(df['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0)
-    plot_x += np.where(df['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0)
-    df['plot_x'] = plot_x + np.random.uniform(0.1, 0.9, size=len(df))
-    df['plot_y'] = plot_y + np.random.uniform(0.1, 0.9, size=len(df))
-    return df
+# Create a figure and axes object with a specific size and background color
+fig, ax = plt.subplots(figsize=(16, 9))
+fig.patch.set_facecolor('#364521') # Dark olive green from your target
 
-df = transform_coords(df)
+# --- 4. Manually Draw the Panels and Grids ---
+PANEL_COLOR = '#8B4513' # Brown
+GAP_SIZE = 1.0 # The gap between panels
 
-# --- 4. Create a Single Plotly Figure ---
-fig = go.Figure()
-
-# Add defect traces
-for dtype, color in defect_style_map.items():
-    dff = df[df['DEFECT_TYPE'] == dtype]
-    if not dff.empty:
-        fig.add_trace(go.Scatter(
-            x=dff['plot_x'], y=dff['plot_y'], mode='markers',
-            marker=dict(color=color, size=8, line=dict(width=0)),
-            name=dtype, showlegend=False
-        ))
-
-# --- 5. Manually Draw the Panels, Borders, and Grids ---
-shapes = []
 panel_coords = [
-    (0, 0), (0, PANEL_SIZE + GAP_SIZE),
-    (PANEL_SIZE + GAP_SIZE, 0), (PANEL_SIZE + GAP_SIZE, PANEL_SIZE + GAP_SIZE)
+    (0, 0),                           # Bottom-Left
+    (PANEL_SIZE + GAP_SIZE, 0),       # Bottom-Right
+    (0, PANEL_SIZE + GAP_SIZE),       # Top-Left
+    (PANEL_SIZE + GAP_SIZE, PANEL_SIZE + GAP_SIZE) # Top-Right
 ]
-THIN_LINE_WIDTH = 1
-THICK_LINE_WIDTH = 4
 
 for x_start, y_start in panel_coords:
-    shapes.append(dict(type='rect', x0=x_start-0.5, y0=y_start-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+PANEL_SIZE-0.5,
-                      line=dict(color="black", width=THICK_LINE_WIDTH), fillcolor=PANEL_COLOR, layer='below'))
-    for i in range(1, PANEL_SIZE):
-        shapes.append(dict(type='line', x0=x_start+i-0.5, y0=y_start-0.5, x1=x_start+i-0.5, y1=y_start+PANEL_SIZE-0.5,
-                          line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
-        shapes.append(dict(type='line', x0=x_start-0.5, y0=y_start+i-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+i-0.5,
-                          line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
-
-# --- 6. Style the Final Layout for Wide Aspect Ratio ---
-total_plot_width = 2 * PANEL_SIZE + GAP_SIZE
-axis_start = -1.5
-axis_end = total_plot_width - 0.5 + 1
-
-fig.update_layout(
-    # --- THIS IS THE FIX ---
-    # Set a wide aspect ratio for the overall figure
-    width=1600, height=900,
-    # ---------------------
+    # Draw the brown panel background
+    panel = Rectangle((x_start, y_start), PANEL_SIZE, PANEL_SIZE,
+                      linewidth=0, facecolor=PANEL_COLOR, zorder=1)
+    ax.add_patch(panel)
     
-    plot_bgcolor=BG_COLOR,
-    paper_bgcolor=BG_COLOR,
-    xaxis=dict(range=[axis_start, axis_end], visible=False),
-    # scaleanchor='x' forces the y-axis to match the x-axis scale, creating a square plot area
-    yaxis=dict(range=[axis_start, axis_end], visible=False, scaleanchor='x', scaleratio=1),
-    shapes=shapes,
-    margin=dict(l=0, r=0, t=0, b=0),
-    showlegend=False
-)
+    # Draw the thin grid lines
+    for i in range(1, PANEL_SIZE):
+        ax.plot([x_start + i, x_start + i], [y_start, y_start + PANEL_SIZE], color='black', linewidth=0.5, zorder=2)
+        ax.plot([x_start, x_start + PANEL_SIZE], [y_start + i, y_start + i], color='black', linewidth=0.5, zorder=2)
+
+# --- 5. Plot the Defects as Small Dots ---
+for dtype, color in defect_style_map.items():
+    dff = df[df['DEFECT_TYPE'] == dtype]
+    
+    # Transform coordinates to plot on the correct panel
+    plot_x = dff['UNIT_INDEX_Y'] % PANEL_SIZE + np.where(dff['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0) + np.random.rand(len(dff))
+    plot_y = dff['UNIT_INDEX_X'] % PANEL_SIZE + np.where(dff['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE, 0) + np.random.rand(len(dff))
+
+    # Use a small 's' value for pixel-like dots
+    ax.scatter(plot_x, plot_y, color=color, s=5, zorder=3)
+
+
+# --- 6. Final Styling ---
+# Define the total area covered by the panels
+total_size = 2 * PANEL_SIZE + GAP_SIZE
+
+# Draw the outer cyan border
+border = Rectangle((0, 0), total_size, total_size,
+                   linewidth=2, edgecolor='cyan', facecolor='none', zorder=4)
+ax.add_patch(border)
+
+# Set axis limits and aspect ratio
+ax.set_xlim(-1, total_size + 1)
+ax.set_ylim(-1, total_size + 1)
+ax.set_aspect('equal', adjustable='box')
+ax.axis('off') # Turn off the axis labels and ticks
 
 # --- 7. Display the plot in Streamlit ---
-st.plotly_chart(fig)
+st.pyplot(fig)
