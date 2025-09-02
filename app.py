@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Enforces a symmetrical 1-unit padding on all sides.
+# Final Version: Creates a wide-aspect plot with correct padding.
 
 import streamlit as st
 import pandas as pd
@@ -73,19 +73,21 @@ for x_start, y_start in panel_coords:
         shapes.append(dict(type='line', x0=x_start-0.5, y0=y_start+i-0.5, x1=x_start+PANEL_SIZE-0.5, y1=y_start+i-0.5,
                           line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
 
-# --- 6. Style the Final Layout with 1-Unit Padding ---
+# --- 6. Style the Final Layout for Wide Aspect Ratio ---
 total_plot_width = 2 * PANEL_SIZE + GAP_SIZE
-# --- THIS IS THE FIX ---
-# The range starts 1 unit before the grid and ends 1 unit after the grid.
 axis_start = -1.5
 axis_end = total_plot_width - 0.5 + 1
-# ---------------------
 
 fig.update_layout(
-    width=1000, height=1000,
+    # --- THIS IS THE FIX ---
+    # Set a wide aspect ratio for the overall figure
+    width=1600, height=900,
+    # ---------------------
+    
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
     xaxis=dict(range=[axis_start, axis_end], visible=False),
+    # scaleanchor='x' forces the y-axis to match the x-axis scale, creating a square plot area
     yaxis=dict(range=[axis_start, axis_end], visible=False, scaleanchor='x', scaleratio=1),
     shapes=shapes,
     margin=dict(l=0, r=0, t=0, b=0),
