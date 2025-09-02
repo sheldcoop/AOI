@@ -3,8 +3,9 @@
 
 import streamlit as st
 from streamlit_plotly_events import plotly_events # Import the event handler
-from core.data_loader import load_and_transform_data
-from ui.plotter import create_defect_map
+# Use relative imports to correctly locate modules within the 'app' package
+from .core.data_loader import load_and_transform_data
+from .ui.plotter import create_defect_map
 
 def main():
     # --- 1. Page Configuration ---
