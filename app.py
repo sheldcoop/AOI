@@ -14,7 +14,7 @@ import shutil
 st.set_page_config(page_title="Quad Panel Defect Map", layout="wide")
 st.title("Interactive Defect Map")
 
-PANEL_FILL_COLOR = '#A0522D'
+PANEL_FILL_COLOR = '#F4A460'
 PANEL_BORDER_COLOR = '#8B4513'
 BG_COLOR = '#6B4226'
 THIN_LINE_WIDTH = 2
