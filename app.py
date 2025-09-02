@@ -1,5 +1,5 @@
 # app.py
-# Final Version: Uses a manual coordinate system for perfect 1-unit padding.
+# Final Version: Enhanced styling with thicker inner lines and new colors.
 
 import streamlit as st
 import pandas as pd
@@ -10,11 +10,17 @@ from PIL import Image, ImageDraw
 import os
 import shutil
 
-# --- 1. Page Configuration & Global Styles ---
+# --- 1. Page Configuration & Enhanced Styling ---
 st.set_page_config(page_title="Quad Panel Defect Map", layout="wide")
 st.title("Interactive Defect Map")
-PANEL_COLOR = '#8B4513'
-BG_COLOR = '#556B2F'
+
+# --- NEW STYLES ---
+PANEL_FILL_COLOR = '#A0522D' # Lighter Brown (Sienna)
+PANEL_BORDER_COLOR = '#8B4513' # Darker Copper/Brown (SaddleBrown)
+BG_COLOR = '#556B2F'   # Dark Olive Green
+THIN_LINE_WIDTH = 2    # Thicker inner lines
+THICK_LINE_WIDTH = 4   # Outer border width
+
 DEFECT_STYLE_MAP = {
     'Nick': 'magenta', 'Short': 'deeppink', 'Missing Feature': 'lime',
     'Pad Violation': 'white', 'Other': 'red'
@@ -38,25 +44,15 @@ def generate_data():
 df = generate_data()
 
 # --- 3. Transform Coordinates for Manual Plotting ---
-PANEL_SIZE = 7
-GAP_SIZE = 1
-PADDING = 1
-
+PANEL_SIZE = 7; GAP_SIZE = 1; PADDING = 1
 def transform_coords(df):
-    # Base position within a 7x7 panel
     plot_x = df['UNIT_INDEX_Y'] % PANEL_SIZE
     plot_y = df['UNIT_INDEX_X'] % PANEL_SIZE
-    
-    # Add offsets for panel position (bottom-left is 0,0)
-    # Add PADDING to shift everything right and up
     plot_y += np.where(df['UNIT_INDEX_X'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE + PADDING, PADDING)
     plot_x += np.where(df['UNIT_INDEX_Y'] >= PANEL_SIZE, PANEL_SIZE + GAP_SIZE + PADDING, PADDING)
-    
-    # Add jitter
     df['plot_x'] = plot_x + np.random.uniform(0.1, 0.9, size=len(df))
     df['plot_y'] = plot_y + np.random.uniform(0.1, 0.9, size=len(df))
     return df
-
 df = transform_coords(df)
 
 col1, col2 = st.columns([2, 1])
@@ -67,32 +63,29 @@ with col1:
         dff = df[df['DEFECT_TYPE'] == dtype]
         fig.add_trace(go.Scatter(x=dff['plot_x'], y=dff['plot_y'], mode='markers', marker=dict(color=color, size=5), name=dtype, customdata=dff.index, hoverinfo='none'))
 
-    # --- Manually Draw Panels and Grids in Absolute Coordinates ---
+    # --- Manually Draw Panels and Grids with New Styles ---
     shapes = []
-    panel_origins = [
-        (PADDING, PADDING), 
-        (PADDING, PADDING + PANEL_SIZE + GAP_SIZE), 
-        (PADDING + PANEL_SIZE + GAP_SIZE, PADDING), 
-        (PADDING + PANEL_SIZE + GAP_SIZE, PADDING + PANEL_SIZE + GAP_SIZE)
-    ]
+    panel_origins = [(PADDING, PADDING), (PADDING, PADDING + PANEL_SIZE + GAP_SIZE), (PADDING + PANEL_SIZE + GAP_SIZE, PADDING), (PADDING + PANEL_SIZE + GAP_SIZE, PADDING + PANEL_SIZE + GAP_SIZE)]
     for x_start, y_start in panel_origins:
-        shapes.append(dict(type='rect', x0=x_start, y0=y_start, x1=x_start+PANEL_SIZE, y1=y_start+PANEL_SIZE, line=dict(width=4, color="black"), fillcolor=PANEL_COLOR, layer='below'))
+        # Panel with lighter fill and dark copper border
+        shapes.append(dict(type='rect', x0=x_start, y0=y_start, x1=x_start+PANEL_SIZE, y1=y_start+PANEL_SIZE,
+                           line=dict(width=THICK_LINE_WIDTH, color=PANEL_BORDER_COLOR),
+                           fillcolor=PANEL_FILL_COLOR, layer='below'))
+        # Thicker inner grid lines
         for i in range(1, PANEL_SIZE):
-            shapes.append(dict(type='line', x0=x_start+i, y0=y_start, x1=x_start+i, y1=y_start+PANEL_SIZE, line=dict(color="black", width=1), layer='below'))
-            shapes.append(dict(type='line', x0=x_start, y0=y_start+i, x1=x_start+PANEL_SIZE, y1=y_start+i, line=dict(color="black", width=1), layer='below'))
+            shapes.append(dict(type='line', x0=x_start+i, y0=y_start, x1=x_start+i, y1=y_start+PANEL_SIZE,
+                               line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
+            shapes.append(dict(type='line', x0=x_start, y0=y_start+i, x1=x_start+PANEL_SIZE, y1=y_start+i,
+                               line=dict(color="black", width=THIN_LINE_WIDTH), layer='below'))
     
-    # --- Style the Final Layout with a Fixed Coordinate System ---
+    # --- Style the Final Layout ---
     total_size = 2 * PADDING + 2 * PANEL_SIZE + GAP_SIZE
-    
     fig.update_layout(
         width=800, height=800,
-        plot_bgcolor=BG_COLOR,
-        paper_bgcolor=BG_COLOR,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR,
         xaxis=dict(range=[0, total_size], visible=False, constrain='domain'),
         yaxis=dict(range=[0, total_size], visible=False, scaleanchor='x', scaleratio=1),
-        shapes=shapes,
-        margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=False
+        shapes=shapes, margin=dict(l=0, r=0, t=0, b=0), showlegend=False
     )
     
     selected_points = plotly_events(fig, click_event=True, key="plot_click")
